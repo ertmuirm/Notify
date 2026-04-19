@@ -21,6 +21,7 @@ class AncsBridgeService : Service() {
     private var notificationCount = 0
     private var targetDeviceAddress: String? = null
     private var advertiser: BluetoothLeAdvertiser? = null
+    private var gattServer: BluetoothGattServer? = null
 
     // ANCS UUIDs
     private val ANCS_SERVICE_UUID = UUID.fromString("7905F214-B5CE-4E99-A40F-4B1E122D00D0")
@@ -48,12 +49,16 @@ class AncsBridgeService : Service() {
     @SuppressLint("MissingPermission")
     private fun startAdvertising() {
         val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
-        advertiser = bluetoothManager.adapter.bluetoothLeAdvertiser
+        val bluetoothAdapter = bluetoothManager.adapter
+        advertiser = bluetoothAdapter.bluetoothLeAdvertiser
         
         if (advertiser == null) {
             addUiLog("Advertising not supported on this device")
             return
         }
+
+        // Setup a dummy GATT server to look like a real accessory
+        setupGattServer(bluetoothManager)
 
         val settings = AdvertiseSettings.Builder()
             .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY)
@@ -64,14 +69,34 @@ class AncsBridgeService : Service() {
 
         val data = AdvertiseData.Builder()
             .setIncludeDeviceName(true)
-            .addServiceUuid(ParcelUuid(ANCS_SERVICE_UUID))
-            // Note: Appearance cannot be set directly in AdvertiseData on Android.
-            // However, including the ANCS UUID in the advertisement is the primary trigger for iOS.
+            .setIncludeTxPowerLevel(true)
             .build()
 
-        advertiser?.startAdvertising(settings, data, advertiseCallback)
-        addUiLog("Started advertising as Wearable...")
+        val scanResponse = AdvertiseData.Builder()
+            .addServiceSolicitationUuid(ParcelUuid(ANCS_SERVICE_UUID))
+            .build()
+
+        advertiser?.startAdvertising(settings, data, scanResponse, advertiseCallback)
+        addUiLog("Broadcasting ANCS Solicitation...")
+        addUiLog("IMPORTANT: Forget device on iPhone and re-pair now!")
         updateUiStatus("advertising")
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun setupGattServer(manager: BluetoothManager) {
+        gattServer?.close()
+        gattServer = manager.openGattServer(this, object : BluetoothGattServerCallback() {
+            override fun onConnectionStateChange(device: BluetoothDevice, status: Int, newState: Int) {
+                Log.d("ANCS", "GATT Server connection state: $newState")
+            }
+        })
+
+        // Add a generic service to be a "valid" BLE peripheral
+        val service = BluetoothGattService(
+            UUID.randomUUID(),
+            BluetoothGattService.SERVICE_TYPE_PRIMARY
+        )
+        gattServer?.addService(service)
     }
 
     private val advertiseCallback = object : AdvertiseCallback() {

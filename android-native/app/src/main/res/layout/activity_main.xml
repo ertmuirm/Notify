@@ -136,8 +136,8 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="PAIRING GUIDE"
-                        android:textColor="#80FFFFFF"
+                        android:text="CRITICAL SETUP STEPS"
+                        android:textColor="#FF4444"
                         android:textSize="10sp"
                         android:letterSpacing="0.1"
                         android:textStyle="bold" />
@@ -146,7 +146,16 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
-                        android:text="1. Pair your iPhone in Android Bluetooth Settings first."
+                        android:text="1. On iPhone BT Settings: 'Forget' this Android device."
+                        android:textColor="#FFFFFF"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="2. Tap 'MASK AS WEARABLE' below to start broadcast."
                         android:textColor="#FFFFFF"
                         android:textSize="12sp" />
 
@@ -154,15 +163,16 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
-                        android:text="2. Go to 'Pairing' tab in this app and connect."
+                        android:text="3. Find and PAIR with this device on your iPhone."
                         android:textColor="#FFFFFF"
-                        android:textSize="12sp" />
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
-                        android:text="3. Ensure 'Share System Notifications' is ON in iPhone BT settings for this device."
+                        android:text="4. Tap (i) on iPhone and toggle 'Share System Notifications' ON."
                         android:textColor="#FFFFFF"
                         android:textSize="12sp" />
 
