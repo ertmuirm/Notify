@@ -40,10 +40,14 @@ interface AncsNotification {
 }
 
 const ANDROID_SOURCE = {
-  instructions: `BUILD INSTRUCTIONS:
-1. Export this project as a ZIP (Settings -> Export).
-2. Open Android Studio and choose the "android-native" folder.
-3. Click "Run" to install the APK to your device.`,
+  instructions: `BUILD INSTRUCTIONS (GitHub):
+1. Use "Export to GitHub" in the project menu.
+2. In your GitHub repo, click the "Actions" tab.
+3. The APK will build automatically and be available for download as an artifact.
+
+BUILD INSTRUCTIONS (Local):
+1. Open "android-native" folder in Android Studio.
+2. Click "Run" (Green Arrow).`,
   manifest: `<!-- AndroidManifest.xml -->
 <manifest ...>
     <application
