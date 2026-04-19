@@ -1,9 +1,6 @@
-package com.example.ancstasker
+package com.ertmuirm.iosnotify
 
 import android.Manifest
-import android.bluetooth.BluetoothAdapter
-import android.bluetooth.BluetoothManager
-import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Button

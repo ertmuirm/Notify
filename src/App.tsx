@@ -45,9 +45,16 @@ const ANDROID_SOURCE = {
 2. In your GitHub repo, click the "Actions" tab.
 3. The APK will build automatically and be available for download as an artifact.
 
-BUILD INSTRUCTIONS (Local):
-1. Open "android-native" folder in Android Studio.
-2. Click "Run" (Green Arrow).`,
+TASKER SETUP (Native Plugin):
+1. In Tasker, add a "Profile" -> "Event".
+2. Select "Plugin" -> "iOS Notification Received".
+3. Tap the "Configuration" icon and then "Save".
+4. You can now use variables like %bundle_id, %sender, and %content.
+
+TASKER SETUP (Intent Broadcast):
+1. Create a "Profile" -> "Event" -> "Intent Received".
+2. Action: "com.ertmuirm.iosnotify.NOTIFICATION_RECEIVED"
+3. Use local variables: %bundle_id, %sender, %content.`,
   manifest: `<!-- AndroidManifest.xml -->
 <manifest ...>
     <application

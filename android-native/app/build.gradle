@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace 'com.example.ancstasker'
+    namespace 'com.ertmuirm.iosnotify'
     compileSdk 34
 
     defaultConfig {
-        applicationId "com.example.ancstasker"
+        applicationId "com.ertmuirm.iosnotify"
         minSdk 21
         targetSdk 34
         versionCode 1
