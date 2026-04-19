@@ -1,7 +1,9 @@
 package com.ertmuirm.iosnotify
 
+import android.annotation.SuppressLint
 import android.app.Service
 import android.bluetooth.*
+import android.content.Context
 import android.content.Intent
 import android.os.IBinder
 import android.util.Log
