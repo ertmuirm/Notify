@@ -26,8 +26,9 @@ jobs:
       run: |
         cd android-native
         if [ ! -f gradlew ]; then
-          gradle wrapper --gradle-version 8.0
+          gradle wrapper --gradle-version 8.1.1
         fi
+        chmod +x gradlew
         ./gradlew assembleDebug
 
     - name: Upload APK
