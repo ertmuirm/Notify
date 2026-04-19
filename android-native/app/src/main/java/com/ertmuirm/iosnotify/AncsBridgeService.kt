@@ -117,7 +117,7 @@ class AncsBridgeService : Service() {
     @SuppressLint("MissingPermission")
     private fun startAdvertising() {
         Log.d("ANCS", "startAdvertising called")
-        addUiLog("Requesting Advertising...")
+        addUiLog("Starting Advertisement...")
         val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
         val bluetoothAdapter = bluetoothManager.adapter
         if (bluetoothAdapter == null) {
@@ -125,17 +125,15 @@ class AncsBridgeService : Service() {
             return
         }
 
-        // Programmatically set name for discovery
-        bluetoothAdapter.name = "iOS Bridge Wearable"
+        // Short name to ensure it fits in BLE packets
+        bluetoothAdapter.name = "iOSBridge"
 
         advertiser = bluetoothAdapter.bluetoothLeAdvertiser
-        
         if (advertiser == null) {
-            addUiLog("Advertising not supported on this device")
+            addUiLog("Error: Advertising not supported")
             return
         }
 
-        // Setup a dummy GATT server to look like a real accessory
         setupGattServer(bluetoothManager)
 
         val settings = AdvertiseSettings.Builder()
@@ -145,23 +143,22 @@ class AncsBridgeService : Service() {
             .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH)
             .build()
 
+        // Packet 1: Must contain the ANCS solicitation for discovery
         val data = AdvertiseData.Builder()
-            .setIncludeDeviceName(true)
+            .setIncludeDeviceName(false) // Name in scan response to save space
             .setIncludeTxPowerLevel(false)
-            .addServiceUuid(ParcelUuid(DEVICE_INFO_SERVICE_UUID))
             .addServiceSolicitationUuid(ParcelUuid(ANCS_SERVICE_UUID))
-            // Adding Apple's Manufacturer ID (0x004C) helps with visibility on iOS
+            .build()
+
+        // Packet 2: Contains the name and compatibility data
+        val scanResponse = AdvertiseData.Builder()
+            .setIncludeDeviceName(true)
             .addManufacturerData(0x004C, byteArrayOf(0x02, 0x15)) 
             .build()
 
-        val scanResponse = AdvertiseData.Builder()
-            .addServiceSolicitationUuid(ParcelUuid(HID_SERVICE_UUID))
-            .build()
-
         advertiser?.startAdvertising(settings, data, scanResponse, advertiseCallback)
-        addUiLog("Advertising as 'Apple Accessory'...")
-        addUiLog("STEP 1: Open iPhone Bluetooth Settings")
-        addUiLog("STEP 2: Pair with 'iOS Bridge Wearable'")
+        addUiLog("Status: Broadcasting...")
+        addUiLog("Check iPhone Bluetooth Settings for 'iOSBridge'")
         updateUiStatus("advertising")
     }
 
@@ -315,18 +312,22 @@ class AncsBridgeService : Service() {
 
     private fun updateUiStatus(status: String) {
         val intent = Intent("com.ertmuirm.iosnotify.BRIDGE_UPDATE")
+        intent.setPackage(packageName)
         intent.putExtra("status", status)
         sendBroadcast(intent)
     }
 
     private fun updateUiCount() {
         val intent = Intent("com.ertmuirm.iosnotify.BRIDGE_UPDATE")
+        intent.setPackage(packageName)
         intent.putExtra("count", notificationCount)
         sendBroadcast(intent)
     }
 
     private fun addUiLog(log: String) {
+        Log.i("ANCS_UI", log)
         val intent = Intent("com.ertmuirm.iosnotify.BRIDGE_UPDATE")
+        intent.setPackage(packageName)
         intent.putExtra("log", log)
         sendBroadcast(intent)
     }
