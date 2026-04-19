@@ -38,6 +38,13 @@ class AncsBridgeService : Service() {
     private var advertiser: BluetoothLeAdvertiser? = null
     private var gattServer: BluetoothGattServer? = null
 
+    // Standard BLE UUIDs
+    private val DEVICE_INFO_SERVICE_UUID = UUID.fromString("0000180A-0000-1000-8000-00805f9b34fb")
+    private val BATTERY_SERVICE_UUID = UUID.fromString("0000180F-0000-1000-8000-00805f9b34fb")
+    private val HID_SERVICE_UUID = UUID.fromString("00001812-0000-1000-8000-00805f9b34fb")
+    private val GAP_SERVICE_UUID = UUID.fromString("00001800-0000-1000-8000-00805f9b34fb")
+    private val APPEARANCE_CHAR_UUID = UUID.fromString("00002A01-0000-1000-8000-00805f9b34fb")
+
     // ANCS UUIDs
     private val ANCS_SERVICE_UUID = UUID.fromString("7905F214-B5CE-4E99-A40F-4B1E122D00D0")
     private val NOTIFICATION_SOURCE_UUID = UUID.fromString("9FBF120D-6301-42D9-8C58-25E699A21DBD")
@@ -117,6 +124,10 @@ class AncsBridgeService : Service() {
             addUiLog("Error: Bluetooth Adapter not found")
             return
         }
+
+        // Try to set a recognizable name
+        bluetoothAdapter.name = "iOS Bridge Wearable"
+
         advertiser = bluetoothAdapter.bluetoothLeAdvertiser
         
         if (advertiser == null) {
@@ -136,16 +147,18 @@ class AncsBridgeService : Service() {
 
         val data = AdvertiseData.Builder()
             .setIncludeDeviceName(true)
-            .setIncludeTxPowerLevel(true)
+            .setIncludeTxPowerLevel(false) // Save space for UUIDs
+            .addServiceUuid(ParcelUuid(DEVICE_INFO_SERVICE_UUID))
             .build()
 
         val scanResponse = AdvertiseData.Builder()
             .addServiceSolicitationUuid(ParcelUuid(ANCS_SERVICE_UUID))
+            .addServiceSolicitationUuid(ParcelUuid(HID_SERVICE_UUID)) // HID often forces visibility
             .build()
 
         advertiser?.startAdvertising(settings, data, scanResponse, advertiseCallback)
-        addUiLog("Broadcasting ANCS Solicitation...")
-        addUiLog("IMPORTANT: Forget device on iPhone and re-pair now!")
+        addUiLog("Broadcasting 'Smartwatch' Profile...")
+        addUiLog("iPhone: Settings > Bluetooth > 'iOS Bridge Wearable'")
         updateUiStatus("advertising")
     }
 
@@ -155,15 +168,42 @@ class AncsBridgeService : Service() {
         gattServer = manager.openGattServer(this, object : BluetoothGattServerCallback() {
             override fun onConnectionStateChange(device: BluetoothDevice, status: Int, newState: Int) {
                 Log.d("ANCS", "GATT Server connection state: $newState")
+                if (newState == BluetoothProfile.STATE_CONNECTED) {
+                    addUiLog("iPhone paired/connected via Virtual Peripheral")
+                }
             }
         })
 
-        // Add a generic service to be a "valid" BLE peripheral
-        val service = BluetoothGattService(
-            UUID.randomUUID(),
-            BluetoothGattService.SERVICE_TYPE_PRIMARY
+        // 1. Device Info Service
+        val infoService = BluetoothGattService(DEVICE_INFO_SERVICE_UUID, BluetoothGattService.SERVICE_TYPE_PRIMARY)
+        infoService.addCharacteristic(BluetoothGattCharacteristic(
+            UUID.fromString("00002A29-0000-1000-8000-00805f9b34fb"), // Manufacturer
+            BluetoothGattCharacteristic.PROPERTY_READ, BluetoothGattCharacteristic.PERMISSION_READ
+        ))
+        gattServer?.addService(infoService)
+
+        // 2. Battery Service
+        val batteryService = BluetoothGattService(BATTERY_SERVICE_UUID, BluetoothGattService.SERVICE_TYPE_PRIMARY)
+        batteryService.addCharacteristic(BluetoothGattCharacteristic(
+            UUID.fromString("00002A19-0000-1000-8000-00805f9b34fb"), // Level
+            BluetoothGattCharacteristic.PROPERTY_READ or BluetoothGattCharacteristic.PROPERTY_NOTIFY,
+            BluetoothGattCharacteristic.PERMISSION_READ
+        ))
+        gattServer?.addService(batteryService)
+
+        // 3. Fake Generic Access for Appearance (Watch)
+        // Some devices allow this override
+        val gapService = BluetoothGattService(GAP_SERVICE_UUID, BluetoothGattService.SERVICE_TYPE_PRIMARY)
+        val appearanceChar = BluetoothGattCharacteristic(
+            APPEARANCE_CHAR_UUID,
+            BluetoothGattCharacteristic.PROPERTY_READ,
+            BluetoothGattCharacteristic.PERMISSION_READ
         )
-        gattServer?.addService(service)
+        // 0x00C1 = Watch
+        @Suppress("DEPRECATION")
+        appearanceChar.value = byteArrayOf(0xC1.toByte(), 0x00)
+        gapService.addCharacteristic(appearanceChar)
+        gattServer?.addService(gapService)
     }
 
     private val advertiseCallback = object : AdvertiseCallback() {
