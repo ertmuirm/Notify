@@ -13,6 +13,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -195,7 +196,7 @@ class MainActivity : AppCompatActivity() {
             val notificationCount = intent.getIntExtra("count", -1)
             val log = intent.getStringExtra("log")
             
-            android.util.Log.d("MainActivity", "Bridge Update Received: status=$status, log=$log")
+            Log.d("MainActivity", "Bridge Update Received: status=$status, log=$log")
             
             if (status.isNotEmpty()) {
                 statusLabel.text = status.uppercase()

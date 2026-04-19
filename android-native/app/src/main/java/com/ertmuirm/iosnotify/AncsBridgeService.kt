@@ -18,6 +18,7 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.content.pm.ServiceInfo
 import android.bluetooth.le.AdvertiseCallback
 import android.bluetooth.le.AdvertiseData
 import android.bluetooth.le.AdvertiseSettings
@@ -48,7 +49,11 @@ class AncsBridgeService : Service() {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
-        startForeground(1, createNotification())
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            startForeground(1, createNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
+        } else {
+            startForeground(1, createNotification())
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -350,7 +355,7 @@ class AncsBridgeService : Service() {
         // 2. Properly formatted Tasker Plugin Event broadcast
         // Tasker identifies plugins by their package/receiver
         val taskerEventIntent = Intent("net.dinglisch.android.tasker.ACTION_FIRE_EVENT")
-        taskerEventIntent.`package` = "net.dinglisch.android.tasker"
+        taskerEventIntent.setPackage("net.dinglisch.android.tasker")
         
         val bundle = Bundle()
         bundle.putString("bundle_id", appId)
