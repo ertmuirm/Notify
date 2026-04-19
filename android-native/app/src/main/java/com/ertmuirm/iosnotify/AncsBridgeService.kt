@@ -14,6 +14,7 @@ import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothProfile
 import android.content.Context
 import android.content.Intent
+import android.os.Bundle
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -240,19 +241,20 @@ class AncsBridgeService : Service() {
             }
         }
 
-    override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
-        val value = characteristic.value
-        if (value == null || value.isEmpty()) return
-        
-        when (characteristic.uuid) {
-            NOTIFICATION_SOURCE_UUID -> {
-                handleNotificationSource(gatt, value)
-            }
-            DATA_SOURCE_UUID -> {
-                handleDataSource(value)
+        override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
+            @Suppress("DEPRECATION")
+            val value = characteristic.value
+            if (value == null || value.isEmpty()) return
+            
+            when (characteristic.uuid) {
+                NOTIFICATION_SOURCE_UUID -> {
+                    handleNotificationSource(gatt, value)
+                }
+                DATA_SOURCE_UUID -> {
+                    handleDataSource(value)
+                }
             }
         }
-    }
     }
 
     private fun updateUiStatus(status: String) {
@@ -315,8 +317,13 @@ class AncsBridgeService : Service() {
         request[13] = 0xff.toByte()
         request[14] = 0xff.toByte()
 
-        controlPoint.value = request
-        gatt.writeCharacteristic(controlPoint)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            gatt.writeCharacteristic(controlPoint, request, BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT)
+        } else {
+            @Suppress("DEPRECATION")
+            controlPoint.value = request
+            gatt.writeCharacteristic(controlPoint)
+        }
         responseBuffer.clear()
     }
 
