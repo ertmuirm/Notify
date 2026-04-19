@@ -26,7 +26,7 @@
             android:layout_width="match_parent"
             android:layout_height="32dp" />
 
-        <CardView
+        <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             app:cardBackgroundColor="#1A1A1A"
@@ -68,7 +68,7 @@
                     android:textColor="#FFFFFF"
                     android:textSize="14sp" />
             </LinearLayout>
-        </CardView>
+        </androidx.cardview.widget.CardView>
 
         <Button
             android:id="@+id/scanButton"

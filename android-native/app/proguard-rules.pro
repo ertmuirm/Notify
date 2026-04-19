@@ -1,2 +1,2 @@
 # Proguard rules
--keep class com.example.ancstasker.** { *; }
+-keep class com.ertmuirm.iosnotify.** { *; }
