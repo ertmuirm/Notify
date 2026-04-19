@@ -10,6 +10,7 @@ import android.bluetooth.le.AdvertiseData
 import android.bluetooth.le.AdvertiseSettings
 import android.bluetooth.le.BluetoothLeAdvertiser
 import android.os.IBinder
+import android.os.ParcelUuid
 import android.util.Log
 import java.util.*
 
@@ -63,8 +64,9 @@ class AncsBridgeService : Service() {
 
         val data = AdvertiseData.Builder()
             .setIncludeDeviceName(true)
-            .addServiceUuid(android.os.ParcelUuid(ANCS_SERVICE_UUID))
-            // 192 = Generic Watch appearance. This triggers the Accessory logic in iOS
+            .addServiceUuid(ParcelUuid(ANCS_SERVICE_UUID))
+            // Note: Appearance cannot be set directly in AdvertiseData on Android.
+            // However, including the ANCS UUID in the advertisement is the primary trigger for iOS.
             .build()
 
         advertiser?.startAdvertising(settings, data, advertiseCallback)
