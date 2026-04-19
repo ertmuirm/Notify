@@ -5,6 +5,10 @@ import android.app.Service
 import android.bluetooth.*
 import android.content.Context
 import android.content.Intent
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
 import android.bluetooth.le.AdvertiseCallback
 import android.bluetooth.le.AdvertiseData
 import android.bluetooth.le.AdvertiseSettings
@@ -32,6 +36,12 @@ class AncsBridgeService : Service() {
     // Client Characteristic Configuration Descriptor
     private val CCCD_UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
 
+    override fun onCreate() {
+        super.onCreate()
+        createNotificationChannel()
+        startForeground(1, createNotification())
+    }
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val action = intent?.action
         if (action == "START_ADVERTISING") {
@@ -46,9 +56,46 @@ class AncsBridgeService : Service() {
         return START_STICKY
     }
 
+    private fun createNotificationChannel() {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                "bridge_service",
+                "iOS Bridge Service",
+                NotificationManager.IMPORTANCE_LOW
+            )
+            val manager = getSystemService(NotificationManager::class.java)
+            manager.createNotificationChannel(channel)
+        }
+    }
+
+    private fun createNotification(): Notification {
+        val intent = Intent(this, MainActivity::class.java)
+        val pendingIntent = PendingIntent.getActivity(
+            this, 0, intent, PendingIntent.FLAG_IMMUTABLE
+        )
+
+        return if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            Notification.Builder(this, "bridge_service")
+                .setContentTitle("iOS Bridge Active")
+                .setContentText("Listening for iPhone notifications...")
+                .setSmallIcon(android.R.drawable.stat_sys_data_bluetooth)
+                .setContentIntent(pendingIntent)
+                .build()
+        } else {
+            @Suppress("DEPRECATION")
+            Notification.Builder(this)
+                .setContentTitle("iOS Bridge Active")
+                .setContentText("Listening for iPhone notifications...")
+                .setSmallIcon(android.R.drawable.stat_sys_data_bluetooth)
+                .setContentIntent(pendingIntent)
+                .build()
+        }
+    }
+
     @SuppressLint("MissingPermission")
     private fun startAdvertising() {
-        val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+        Log.d("ANCS", "startAdvertising called")
+        addUiLog("Requesting Advertising...")
         val bluetoothAdapter = bluetoothManager.adapter
         advertiser = bluetoothAdapter.bluetoothLeAdvertiser
         
@@ -114,11 +161,18 @@ class AncsBridgeService : Service() {
         val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
         val device = bluetoothManager.adapter.getRemoteDevice(address)
         
-        Log.i("ANCS", "Connecting to $address")
+        Log.i("ANCS", "Connecting to $address via LE")
+        addUiLog("Attempting GATT connection...")
+        
         bluetoothGatt?.disconnect()
         bluetoothGatt?.close()
         
-        bluetoothGatt = device.connectGatt(this, false, gattCallback)
+        // Use TRANSPORT_LE for better compatibility with modern devices
+        bluetoothGatt = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+            device.connectGatt(this, false, gattCallback, BluetoothDevice.TRANSPORT_LE)
+        } else {
+            device.connectGatt(this, false, gattCallback)
+        }
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -126,28 +180,39 @@ class AncsBridgeService : Service() {
     private val gattCallback = object : BluetoothGattCallback() {
         @SuppressLint("MissingPermission")
         override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
+            Log.d("ANCS", "ConnectionStateChange: status=$status, newState=$newState")
             if (newState == BluetoothProfile.STATE_CONNECTED) {
                 Log.i("ANCS", "Connected to GATT server.")
+                addUiLog("GATT Connected. Discovering services...")
                 updateUiStatus("connected")
                 gatt.discoverServices()
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                 Log.i("ANCS", "Disconnected from GATT server.")
+                addUiLog("GATT Disconnected (status: $status)")
                 updateUiStatus("disconnected")
                 bluetoothGatt = null
             }
         }
 
         override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
+            Log.d("ANCS", "Services discovered: status=$status")
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 val service = gatt.getService(ANCS_SERVICE_UUID)
                 if (service != null) {
+                    Log.i("ANCS", "ANCS Service found")
+                    addUiLog("ANCS Service found!")
                     val notificationSource = service.getCharacteristic(NOTIFICATION_SOURCE_UUID)
                     val dataSource = service.getCharacteristic(DATA_SOURCE_UUID)
 
                     // Enable notifications for both Source and Data
-                    enableNotification(gatt, notificationSource)
-                    enableNotification(gatt, dataSource)
+                    if (notificationSource != null) enableNotification(gatt, notificationSource)
+                    if (dataSource != null) enableNotification(gatt, dataSource)
+                } else {
+                    Log.e("ANCS", "ANCS Service NOT found on this device")
+                    addUiLog("Error: ANCS Service not found. Is notification sharing ON?")
                 }
+            } else {
+                addUiLog("Service discovery failed: $status")
             }
         }
 
@@ -263,21 +328,42 @@ class AncsBridgeService : Service() {
     }
 
     private fun sendDetailedTaskerIntent(appId: String, title: String, message: String) {
-        // Broadcast for Tasker Event Plugin
+        Log.i("ANCS", "Firing Tasker Event: $title")
+        
+        // 1. Generic broadcast for Tasker "Intent Received" listeners
         val broadcastIntent = Intent("com.ertmuirm.iosnotify.NOTIFICATION_RECEIVED")
         broadcastIntent.putExtra("bundle_id", appId)
         broadcastIntent.putExtra("sender", title)
         broadcastIntent.putExtra("content", message)
         
-        // Generic tasker trigger for backward compatibility
-        val taskIntent = Intent("net.dinglisch.android.tasker.ACTION_TASK")
-        taskIntent.putExtra("task_name", "HandleiOSNotification")
-        taskIntent.putExtra("varName", "notification_raw")
-        taskIntent.putExtra("varValue", "App: $appId | From: $title | Msg: $message")
+        // 2. Properly formatted Tasker Plugin Event broadcast
+        // Tasker identifies plugins by their package/receiver
+        val taskerEventIntent = Intent("net.dinglisch.android.tasker.ACTION_FIRE_EVENT")
+        taskerEventIntent.`package` = "net.dinglisch.android.tasker"
+        
+        val bundle = Bundle()
+        bundle.putString("bundle_id", appId)
+        bundle.putString("sender", title)
+        bundle.putString("content", message)
+        
+        // Metadata required for Tasker to map it back to the event
+        taskerEventIntent.putExtra("com.twofortyfouram.locale.intent.extra.BUNDLE", bundle)
+        
+        // Also send variables directly
+        val vars = Bundle()
+        vars.putString("%bundle_id", appId)
+        vars.putString("%sender", title)
+        vars.putString("%content", message)
+        taskerEventIntent.putExtra("net.dinglisch.android.tasker.extras.VARIABLES", vars)
         
         sendBroadcast(broadcastIntent)
-        sendBroadcast(taskIntent)
-        Log.i("ANCS", "Comprehensive notification sent to Tasker: $title")
+        try {
+            sendBroadcast(taskerEventIntent)
+        } catch (e: Exception) {
+            Log.e("ANCS", "Failed to send tasker event: ${e.message}")
+        }
+        
+        Log.i("ANCS", "Log entry sent: [$appId] $title")
     }
 
     override fun onDestroy() {

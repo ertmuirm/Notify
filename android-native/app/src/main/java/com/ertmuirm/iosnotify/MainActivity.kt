@@ -126,6 +126,9 @@ class MainActivity : AppCompatActivity() {
             permissions.add(Manifest.permission.BLUETOOTH_CONNECT)
             permissions.add(Manifest.permission.BLUETOOTH_ADVERTISE)
         }
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            permissions.add(Manifest.permission.POST_NOTIFICATIONS)
+        }
         ActivityCompat.requestPermissions(this, permissions.toTypedArray(), 1)
     }
 
@@ -191,6 +194,8 @@ class MainActivity : AppCompatActivity() {
             val status = intent.getStringExtra("status") ?: ""
             val notificationCount = intent.getIntExtra("count", -1)
             val log = intent.getStringExtra("log")
+            
+            android.util.Log.d("MainActivity", "Bridge Update Received: status=$status, log=$log")
             
             if (status.isNotEmpty()) {
                 statusLabel.text = status.uppercase()
