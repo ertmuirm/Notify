@@ -1,0 +1,11 @@
+{
+  "name": "iOS Notify",
+  "description": "An Android utility to bridge iOS ANCS notifications to Tasker events using BLE.",
+  "requestFramePermissions": [
+    "bluetooth"
+  ],
+  "majorCapabilities": [
+    "Bluetooth Low Energy",
+    "Android Tasker Integration"
+  ]
+}
