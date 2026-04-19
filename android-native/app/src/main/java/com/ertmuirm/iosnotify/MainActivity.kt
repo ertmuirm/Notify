@@ -84,9 +84,20 @@ class MainActivity : AppCompatActivity() {
         }
 
         findViewById<View>(R.id.scanButton).setOnClickListener { startScan() }
+        findViewById<View>(R.id.maskButton).setOnClickListener { 
+            val intent = Intent(this, AncsBridgeService::class.java)
+            intent.action = "START_ADVERTISING"
+            startService(intent)
+            Toast.makeText(this, "Advertising... find this device on iPhone BT settings", Toast.LENGTH_LONG).show()
+        }
         findViewById<View>(R.id.clearLogsButton).setOnClickListener { 
             logs.clear()
             logsAdapter.notifyDataSetChanged()
+        }
+        
+        findViewById<View>(R.id.openSettingsButton).setOnClickListener {
+            val intent = Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS)
+            startActivity(intent)
         }
 
         val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager

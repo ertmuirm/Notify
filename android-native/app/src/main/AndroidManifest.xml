@@ -42,15 +42,6 @@
                 <action android:name="net.dinglisch.android.tasker.ACTION_EDIT_EVENT" />
             </intent-filter>
         </activity>
-
-        <!-- Dummy Receiver to satisfy Tasker Plugin discovery -->
-        <receiver
-            android:name=".TaskerPluginReceiver"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="com.twofortyfouram.locale.intent.action.FIRE_SETTING" />
-            </intent-filter>
-        </receiver>
     </application>
 
 </manifest>

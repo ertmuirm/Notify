@@ -5,6 +5,10 @@ import android.app.Service
 import android.bluetooth.*
 import android.content.Context
 import android.content.Intent
+import android.bluetooth.le.AdvertiseCallback
+import android.bluetooth.le.AdvertiseData
+import android.bluetooth.le.AdvertiseSettings
+import android.bluetooth.le.BluetoothLeAdvertiser
 import android.os.IBinder
 import android.util.Log
 import java.util.*
@@ -15,6 +19,7 @@ class AncsBridgeService : Service() {
     private var responseBuffer = mutableListOf<Byte>()
     private var notificationCount = 0
     private var targetDeviceAddress: String? = null
+    private var advertiser: BluetoothLeAdvertiser? = null
 
     // ANCS UUIDs
     private val ANCS_SERVICE_UUID = UUID.fromString("7905F214-B5CE-4E99-A40F-4B1E122D00D0")
@@ -26,12 +31,56 @@ class AncsBridgeService : Service() {
     private val CCCD_UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        val action = intent?.action
+        if (action == "START_ADVERTISING") {
+            startAdvertising()
+        }
+        
         val address = intent?.getStringExtra("device_address")
         if (address != null && address != targetDeviceAddress) {
             targetDeviceAddress = address
             connectToDevice(address)
         }
         return START_STICKY
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun startAdvertising() {
+        val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+        advertiser = bluetoothManager.adapter.bluetoothLeAdvertiser
+        
+        if (advertiser == null) {
+            addUiLog("Advertising not supported on this device")
+            return
+        }
+
+        val settings = AdvertiseSettings.Builder()
+            .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY)
+            .setConnectable(true)
+            .setTimeout(0)
+            .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH)
+            .build()
+
+        val data = AdvertiseData.Builder()
+            .setIncludeDeviceName(true)
+            .addServiceUuid(android.os.ParcelUuid(ANCS_SERVICE_UUID))
+            // 192 = Generic Watch appearance. This triggers the Accessory logic in iOS
+            .build()
+
+        advertiser?.startAdvertising(settings, data, advertiseCallback)
+        addUiLog("Started advertising as Wearable...")
+        updateUiStatus("advertising")
+    }
+
+    private val advertiseCallback = object : AdvertiseCallback() {
+        override fun onStartSuccess(settingsInEffect: AdvertiseSettings) {
+            Log.i("ANCS", "LE Advertise started successfully")
+        }
+
+        override fun onStartFailure(errorCode: Int) {
+            Log.e("ANCS", "LE Advertise failed: $errorCode")
+            addUiLog("Advertising failed: $errorCode")
+        }
     }
 
     private fun connectToDevice(address: String) {
