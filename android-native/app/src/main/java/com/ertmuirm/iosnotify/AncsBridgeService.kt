@@ -227,12 +227,13 @@ class AncsBridgeService : Service() {
         }
 
         override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
+            val value = characteristic.value ?: return
             when (characteristic.uuid) {
                 NOTIFICATION_SOURCE_UUID -> {
-                    handleNotificationSource(gatt, characteristic.value)
+                    handleNotificationSource(gatt, value)
                 }
                 DATA_SOURCE_UUID -> {
-                    handleDataSource(characteristic.value)
+                    handleDataSource(value)
                 }
             }
         }
@@ -259,7 +260,7 @@ class AncsBridgeService : Service() {
     @SuppressLint("MissingPermission")
     private fun enableNotification(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
         gatt.setCharacteristicNotification(characteristic, true)
-        val descriptor = characteristic.getDescriptor(CCCD_UUID)
+        val descriptor = characteristic.getDescriptor(CCCD_UUID) ?: return
         descriptor.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
         gatt.writeDescriptor(descriptor)
     }
