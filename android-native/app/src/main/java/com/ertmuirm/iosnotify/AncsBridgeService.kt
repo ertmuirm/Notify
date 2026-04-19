@@ -240,17 +240,19 @@ class AncsBridgeService : Service() {
             }
         }
 
-        override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
-            val value = characteristic.value ?: return
-            when (characteristic.uuid) {
-                NOTIFICATION_SOURCE_UUID -> {
-                    handleNotificationSource(gatt, value)
-                }
-                DATA_SOURCE_UUID -> {
-                    handleDataSource(value)
-                }
+    override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
+        val value = characteristic.value
+        if (value == null || value.isEmpty()) return
+        
+        when (characteristic.uuid) {
+            NOTIFICATION_SOURCE_UUID -> {
+                handleNotificationSource(gatt, value)
+            }
+            DATA_SOURCE_UUID -> {
+                handleDataSource(value)
             }
         }
+    }
     }
 
     private fun updateUiStatus(status: String) {
@@ -293,17 +295,25 @@ class AncsBridgeService : Service() {
 
     @SuppressLint("MissingPermission")
     private fun requestNotificationAttributes(gatt: BluetoothGatt, uid: ByteArray) {
-        val service = gatt.getService(ANCS_SERVICE_UUID)
-        val controlPoint = service?.getCharacteristic(CONTROL_POINT_UUID) ?: return
+        val service = gatt.getService(ANCS_SERVICE_UUID) ?: return
+        val controlPoint = service.getCharacteristic(CONTROL_POINT_UUID) ?: return
 
-        val request = byteArrayOf(
-            0x00, 
-            uid[0], uid[1], uid[2], uid[3],
-            0x00, // AppIdentifier
-            0x01, 0xff.toByte(), 0xff.toByte(), // Title
-            0x02, 0xff.toByte(), 0xff.toByte(), // Subtitle
-            0x03, 0xff.toByte(), 0xff.toByte()  // Message
-        )
+        val request = ByteArray(15)
+        request[0] = 0x00
+        request[1] = uid[0]
+        request[2] = uid[1]
+        request[3] = uid[2]
+        request[4] = uid[3]
+        request[5] = 0x00 // AppIdentifier
+        request[6] = 0x01
+        request[7] = 0xff.toByte()
+        request[8] = 0xff.toByte()
+        request[9] = 0x02
+        request[10] = 0xff.toByte()
+        request[11] = 0xff.toByte()
+        request[12] = 0x03
+        request[13] = 0xff.toByte()
+        request[14] = 0xff.toByte()
 
         controlPoint.value = request
         gatt.writeCharacteristic(controlPoint)
