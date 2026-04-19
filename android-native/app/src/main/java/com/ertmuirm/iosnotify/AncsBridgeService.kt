@@ -125,7 +125,7 @@ class AncsBridgeService : Service() {
             return
         }
 
-        // Try to set a recognizable name
+        // Programmatically set name for discovery
         bluetoothAdapter.name = "iOS Bridge Wearable"
 
         advertiser = bluetoothAdapter.bluetoothLeAdvertiser
@@ -147,18 +147,21 @@ class AncsBridgeService : Service() {
 
         val data = AdvertiseData.Builder()
             .setIncludeDeviceName(true)
-            .setIncludeTxPowerLevel(false) // Save space for UUIDs
+            .setIncludeTxPowerLevel(false)
             .addServiceUuid(ParcelUuid(DEVICE_INFO_SERVICE_UUID))
+            .addServiceSolicitationUuid(ParcelUuid(ANCS_SERVICE_UUID))
+            // Adding Apple's Manufacturer ID (0x004C) helps with visibility on iOS
+            .addManufacturerData(0x004C, byteArrayOf(0x02, 0x15)) 
             .build()
 
         val scanResponse = AdvertiseData.Builder()
-            .addServiceSolicitationUuid(ParcelUuid(ANCS_SERVICE_UUID))
-            .addServiceSolicitationUuid(ParcelUuid(HID_SERVICE_UUID)) // HID often forces visibility
+            .addServiceSolicitationUuid(ParcelUuid(HID_SERVICE_UUID))
             .build()
 
         advertiser?.startAdvertising(settings, data, scanResponse, advertiseCallback)
-        addUiLog("Broadcasting 'Smartwatch' Profile...")
-        addUiLog("iPhone: Settings > Bluetooth > 'iOS Bridge Wearable'")
+        addUiLog("Advertising as 'Apple Accessory'...")
+        addUiLog("STEP 1: Open iPhone Bluetooth Settings")
+        addUiLog("STEP 2: Pair with 'iOS Bridge Wearable'")
         updateUiStatus("advertising")
     }
 
@@ -176,10 +179,23 @@ class AncsBridgeService : Service() {
 
         // 1. Device Info Service
         val infoService = BluetoothGattService(DEVICE_INFO_SERVICE_UUID, BluetoothGattService.SERVICE_TYPE_PRIMARY)
-        infoService.addCharacteristic(BluetoothGattCharacteristic(
-            UUID.fromString("00002A29-0000-1000-8000-00805f9b34fb"), // Manufacturer
+        
+        val manufacturerChar = BluetoothGattCharacteristic(
+            UUID.fromString("00002A29-0000-1000-8000-00805f9b34fb"),
             BluetoothGattCharacteristic.PROPERTY_READ, BluetoothGattCharacteristic.PERMISSION_READ
-        ))
+        )
+        @Suppress("DEPRECATION")
+        manufacturerChar.value = "Apple Inc.".toByteArray() // "Faking" Apple manufacturer sometimes helps
+        
+        val modelChar = BluetoothGattCharacteristic(
+            UUID.fromString("00002A24-0000-1000-8000-00805f9b34fb"),
+            BluetoothGattCharacteristic.PROPERTY_READ, BluetoothGattCharacteristic.PERMISSION_READ
+        )
+        @Suppress("DEPRECATION")
+        modelChar.value = "Watch6,1".toByteArray()
+        
+        infoService.addCharacteristic(manufacturerChar)
+        infoService.addCharacteristic(modelChar)
         gattServer?.addService(infoService)
 
         // 2. Battery Service

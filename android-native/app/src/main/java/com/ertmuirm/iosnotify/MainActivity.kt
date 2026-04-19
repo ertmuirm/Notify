@@ -118,6 +118,20 @@ class MainActivity : AppCompatActivity() {
         view.visibility = View.VISIBLE
     }
 
+    private fun checkBluetoothAndLocation(): Boolean {
+        if (bluetoothAdapter == null || !bluetoothAdapter!!.isEnabled) {
+            Toast.makeText(this, "Please enable Bluetooth", Toast.LENGTH_LONG).show()
+            return false
+        }
+        
+        val locationManager = getSystemService(Context.LOCATION_SERVICE) as android.location.LocationManager
+        if (!locationManager.isProviderEnabled(android.location.LocationManager.GPS_PROVIDER)) {
+            Toast.makeText(this, "Scanning requires Location to be ON", Toast.LENGTH_LONG).show()
+            return false
+        }
+        return true
+    }
+
     private fun requestPermissions() {
         val permissions = mutableListOf(
             Manifest.permission.ACCESS_FINE_LOCATION
@@ -135,6 +149,7 @@ class MainActivity : AppCompatActivity() {
 
     @SuppressLint("MissingPermission")
     private fun startScan() {
+        if (!checkBluetoothAndLocation()) return
         if (isScanning) return
         
         discoveredDevices.clear()

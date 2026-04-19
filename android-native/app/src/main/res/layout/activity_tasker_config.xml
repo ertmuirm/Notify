@@ -9,16 +9,16 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="iOS Notification Relay"
+        android:text="Relays all iOS Notifications"
         android:textSize="24sp"
         android:textStyle="bold"
         android:textColor="#000000"
-        android:layout_marginBottom="16dp"/>
+        android:layout_marginBottom="8dp"/>
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="This plugin fires an event whenever your iPhone receives a notification. You can use the following variables in your Tasker Task:"
+        android:text="This plugin allows you to react to iPhone notifications in Tasker. The following variables will be populated:"
         android:textSize="16sp"
         android:textColor="#333333"
         android:layout_marginBottom="24dp"/>

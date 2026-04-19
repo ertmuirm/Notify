@@ -26,7 +26,7 @@ class TaskerEventConfigActivity : AppCompatActivity() {
             resultIntent.putExtra("net.dinglisch.android.tasker.extras.VARIABLES", vars)
             
             resultIntent.putExtra("com.twofortyfouram.locale.intent.extra.BUNDLE", bundle)
-            resultIntent.putExtra("com.twofortyfouram.locale.intent.extra.BLURB", "Relays all iOS Notifications")
+            resultIntent.putExtra("com.twofortyfouram.locale.intent.extra.BLURB", "Relays all iOS Notifications\n(%bundle_id, %sender, %content)")
             
             setResult(RESULT_OK, resultIntent)
             finish()
