@@ -2,12 +2,13 @@ apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
 
 android {
-    compileSdk 32
+    namespace 'com.example.ancstasker'
+    compileSdk 34
 
     defaultConfig {
         applicationId "com.example.ancstasker"
         minSdk 21
-        targetSdk 32
+        targetSdk 34
         versionCode 1
         versionName "1.0"
 
