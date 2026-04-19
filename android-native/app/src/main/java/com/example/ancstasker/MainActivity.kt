@@ -20,8 +20,8 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        statusText = findViewById(R.id.statusText)
-        pairButton = findViewById(R.id.pairButton)
+        statusText = findViewById(R.id.statusLabel)
+        pairButton = findViewById(R.id.scanButton)
 
         requestPermissions()
 
