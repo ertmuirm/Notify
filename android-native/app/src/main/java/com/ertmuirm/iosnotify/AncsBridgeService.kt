@@ -96,6 +96,7 @@ class AncsBridgeService : Service() {
     private fun startAdvertising() {
         Log.d("ANCS", "startAdvertising called")
         addUiLog("Requesting Advertising...")
+        val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
         val bluetoothAdapter = bluetoothManager.adapter
         advertiser = bluetoothAdapter.bluetoothLeAdvertiser
         
