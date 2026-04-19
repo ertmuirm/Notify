@@ -112,6 +112,10 @@ class AncsBridgeService : Service() {
         addUiLog("Requesting Advertising...")
         val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
         val bluetoothAdapter = bluetoothManager.adapter
+        if (bluetoothAdapter == null) {
+            addUiLog("Error: Bluetooth Adapter not found")
+            return
+        }
         advertiser = bluetoothAdapter.bluetoothLeAdvertiser
         
         if (advertiser == null) {
@@ -174,7 +178,12 @@ class AncsBridgeService : Service() {
 
     private fun connectToDevice(address: String) {
         val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
-        val device = bluetoothManager.adapter.getRemoteDevice(address)
+        val bluetoothAdapter = bluetoothManager.adapter
+        if (bluetoothAdapter == null) {
+            addUiLog("Error: BT Adapter unavailable")
+            return
+        }
+        val device = bluetoothAdapter.getRemoteDevice(address)
         
         Log.i("ANCS", "Connecting to $address via LE")
         addUiLog("Attempting GATT connection...")
