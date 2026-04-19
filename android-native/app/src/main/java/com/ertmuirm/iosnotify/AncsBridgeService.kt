@@ -11,6 +11,8 @@ class AncsBridgeService : Service() {
 
     private var bluetoothGatt: BluetoothGatt? = null
     private var responseBuffer = mutableListOf<Byte>()
+    private var notificationCount = 0
+    private var targetDeviceAddress: String? = null
 
     // ANCS UUIDs
     private val ANCS_SERVICE_UUID = UUID.fromString("7905F214-B5CE-4E99-A40F-4B1E122D00D0")
@@ -21,16 +23,38 @@ class AncsBridgeService : Service() {
     // Client Characteristic Configuration Descriptor
     private val CCCD_UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
 
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        val address = intent?.getStringExtra("device_address")
+        if (address != null && address != targetDeviceAddress) {
+            targetDeviceAddress = address
+            connectToDevice(address)
+        }
+        return START_STICKY
+    }
+
+    private fun connectToDevice(address: String) {
+        val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+        val device = bluetoothManager.adapter.getRemoteDevice(address)
+        
+        Log.i("ANCS", "Connecting to $address")
+        bluetoothGatt?.disconnect()
+        bluetoothGatt?.close()
+        
+        bluetoothGatt = device.connectGatt(this, false, gattCallback)
+    }
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     private val gattCallback = object : BluetoothGattCallback() {
+        @SuppressLint("MissingPermission")
         override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
             if (newState == BluetoothProfile.STATE_CONNECTED) {
                 Log.i("ANCS", "Connected to GATT server.")
-                bluetoothGatt = gatt
+                updateUiStatus("connected")
                 gatt.discoverServices()
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                 Log.i("ANCS", "Disconnected from GATT server.")
+                updateUiStatus("disconnected")
                 bluetoothGatt = null
             }
         }
@@ -61,6 +85,25 @@ class AncsBridgeService : Service() {
         }
     }
 
+    private fun updateUiStatus(status: String) {
+        val intent = Intent("com.ertmuirm.iosnotify.BRIDGE_UPDATE")
+        intent.putExtra("status", status)
+        sendBroadcast(intent)
+    }
+
+    private fun updateUiCount() {
+        val intent = Intent("com.ertmuirm.iosnotify.BRIDGE_UPDATE")
+        intent.putExtra("count", notificationCount)
+        sendBroadcast(intent)
+    }
+
+    private fun addUiLog(log: String) {
+        val intent = Intent("com.ertmuirm.iosnotify.BRIDGE_UPDATE")
+        intent.putExtra("log", log)
+        sendBroadcast(intent)
+    }
+
+    @SuppressLint("MissingPermission")
     private fun enableNotification(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
         gatt.setCharacteristicNotification(characteristic, true)
         val descriptor = characteristic.getDescriptor(CCCD_UUID)
@@ -80,6 +123,7 @@ class AncsBridgeService : Service() {
         }
     }
 
+    @SuppressLint("MissingPermission")
     private fun requestNotificationAttributes(gatt: BluetoothGatt, uid: ByteArray) {
         val service = gatt.getService(ANCS_SERVICE_UUID)
         val controlPoint = service?.getCharacteristic(CONTROL_POINT_UUID) ?: return
@@ -123,11 +167,16 @@ class AncsBridgeService : Service() {
             }
 
             if (attributes.containsKey(1) && attributes.containsKey(3)) {
-                sendDetailedTaskerIntent(
-                    appId = attributes[0] ?: "unknown",
-                    title = attributes[1] ?: "",
-                    message = attributes[3] ?: ""
-                )
+                notificationCount++
+                updateUiCount()
+                
+                val appId = attributes[0] ?: "unknown"
+                val title = attributes[1] ?: ""
+                val message = attributes[3] ?: ""
+                
+                addUiLog("[$appId] $title: $message")
+                sendDetailedTaskerIntent(appId, title, message)
+                
                 responseBuffer.clear()
             }
         } catch (e: Exception) {
@@ -142,8 +191,7 @@ class AncsBridgeService : Service() {
         broadcastIntent.putExtra("sender", title)
         broadcastIntent.putExtra("content", message)
         
-        // Tasker Plugin variables are often passed in a bundle or as extra that can be mapped
-        // We'll also send the generic tasker trigger for backward compatibility
+        // Generic tasker trigger for backward compatibility
         val taskIntent = Intent("net.dinglisch.android.tasker.ACTION_TASK")
         taskIntent.putExtra("task_name", "HandleiOSNotification")
         taskIntent.putExtra("varName", "notification_raw")
@@ -152,5 +200,11 @@ class AncsBridgeService : Service() {
         sendBroadcast(broadcastIntent)
         sendBroadcast(taskIntent)
         Log.i("ANCS", "Comprehensive notification sent to Tasker: $title")
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        bluetoothGatt?.disconnect()
+        bluetoothGatt?.close()
     }
 }

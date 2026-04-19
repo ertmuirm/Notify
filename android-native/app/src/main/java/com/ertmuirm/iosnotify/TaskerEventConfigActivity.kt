@@ -20,6 +20,11 @@ class TaskerEventConfigActivity : AppCompatActivity() {
         
         // Tasker Event description shown in UI
         bundle.putString("net.dinglisch.android.tasker.extras.VARIABLE_REPLACE_KEYS", "")
+        
+        // Provide variable hints for Tasker UI
+        val vars = arrayOf("%bundle_id", "%sender", "%content")
+        resultIntent.putExtra("net.dinglisch.android.tasker.extras.VARIABLES", vars)
+        
         resultIntent.putExtra("com.twofortyfouram.locale.intent.extra.BUNDLE", bundle)
         resultIntent.putExtra("com.twofortyfouram.locale.intent.extra.BLURB", "Relays all iOS Notifications")
         
