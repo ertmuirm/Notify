@@ -20,6 +20,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.bottomnavigation.BottomNavigationView
@@ -95,7 +96,7 @@ class MainActivity : AppCompatActivity() {
         
         // Register for bridge updates
         val filter = IntentFilter("com.ertmuirm.iosnotify.BRIDGE_UPDATE")
-        registerReceiver(bridgeReceiver, filter)
+        ContextCompat.registerReceiver(this, bridgeReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
     }
 
     private fun showTab(view: View) {
@@ -167,7 +168,7 @@ class MainActivity : AppCompatActivity() {
         deviceNameText.text = device.name ?: "Unknown"
         deviceAddressText.text = device.address
         statusLabel.text = "CONNECTING..."
-        statusLabel.setTextColor(resources.getColor(android.R.color.holo_orange_light))
+        statusLabel.setTextColor(ContextCompat.getColor(this, android.R.color.holo_orange_light))
         
         Toast.makeText(this, "Starting Bridge Service...", Toast.LENGTH_SHORT).show()
         showTab(statusView)
@@ -182,9 +183,9 @@ class MainActivity : AppCompatActivity() {
             if (status.isNotEmpty()) {
                 statusLabel.text = status.uppercase()
                 if (status == "connected") {
-                    statusLabel.setTextColor(resources.getColor(android.R.color.holo_green_light))
+                    statusLabel.setTextColor(ContextCompat.getColor(this@MainActivity, android.R.color.holo_green_light))
                 } else {
-                    statusLabel.setTextColor(resources.getColor(android.R.color.holo_red_light))
+                    statusLabel.setTextColor(ContextCompat.getColor(this@MainActivity, android.R.color.holo_red_light))
                 }
             }
             

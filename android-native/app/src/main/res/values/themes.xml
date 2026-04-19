@@ -1,5 +1,5 @@
 <resources>
-    <style name="Theme.iOSNotify" parent="Theme.AppCompat.NoActionBar">
+    <style name="Theme.iOSNotify" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <item name="android:windowBackground">@color/black</item>
         <item name="android:statusBarColor">@color/black</item>
     </style>
